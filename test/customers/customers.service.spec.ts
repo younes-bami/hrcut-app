@@ -1,11 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { CustomersService } from '../../src/customers/customers.service';
-import { Customer, CustomerDocument } from '../../src/customers/schemas/customer.schema';
+import { Customer } from '../../src/customers/schemas/customer.schema';
 import { createNotFoundError, createConflictError } from '../../src/common/utils/error.utils';
-import { InternalServerErrorException } from '@nestjs/common';
+import { InternalServerErrorException, ConflictException } from '@nestjs/common';
+import { RegisterCustomerDto } from '../../src/customers/dto/RegisterCustomer.dto';
 import { CreateCustomerDto } from '../../src/customers/dto/create-customer.dto';
-import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
 
 // Mock class to simulate Customer model
 class MockCustomerModel {
@@ -16,7 +17,7 @@ class MockCustomerModel {
 
   static findOne = jest.fn();
   static create = jest.fn().mockImplementation((data) => new MockCustomerModel(data));
-  static exec = jest.fn().mockReturnValue(this);
+  static exec = jest.fn().mockReturnThis();
   static select = jest.fn().mockReturnThis();
 }
 
@@ -146,4 +147,6 @@ describe('CustomersService', () => {
       await expect(service.createCustomer(createCustomerDto)).rejects.toThrow(InternalServerErrorException);
     });
   });
+
+  
 });

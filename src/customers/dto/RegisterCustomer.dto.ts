@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEmail } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, MinLength, Matches } from 'class-validator';
 import { IsMoroccanPhoneNumber } from './custom-validators';
 
 export class RegisterCustomerDto {
@@ -8,6 +8,8 @@ export class RegisterCustomerDto {
 
   @IsString()
   @IsNotEmpty()
+  @MinLength(8)
+  @Matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/, { message: 'Password too weak' })
   password: string;
 
   @IsString()
