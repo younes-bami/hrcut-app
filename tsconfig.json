@@ -4,14 +4,25 @@
     "target": "es6",
     "strict": true,
     "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
     "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./"
+    "baseUrl": "./",
+    "paths": {
+      "@app/*": ["src/*"],
+      "@test/*": ["test/*"]
+    },
+    "rootDirs": ["src", "test"],
+    "rootDir": ".",
+    "typeRoots": ["node_modules/@types", "src/common/types"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "test/customers/customers.controller.spec.old", "test/customers/customers.service.spec.old"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -40,6 +40,21 @@ export class CustomersService {
     return this.findCustomerByField('username', username);
   }
 
+  async findById(id: string): Promise<CustomerDocument | null> {
+    try {
+      const customer = await this.customerModel.findById(id).exec();
+      if (!customer) {
+        throw createNotFoundError('Customer', id);
+      }
+      return customer;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException((error as Error).message);
+    }
+  }
+
   private async checkExistingCustomer(username: string, email: string) {
     const existingCustomerByEmail = await this.customerModel.findOne({ email }).exec();
     if (existingCustomerByEmail) {
@@ -70,6 +85,4 @@ export class CustomersService {
 
     return await newCustomer.save();
   }
-
-  
 }
