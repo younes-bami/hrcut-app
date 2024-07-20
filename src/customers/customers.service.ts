@@ -8,9 +8,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Customer, CustomerDocument } from './schemas/customer.schema';
-import { createNotFoundError, createConflictError, createUnauthorizedError } from '../common/utils/error.utils';
+import { createNotFoundError, createConflictError, createUnauthorizedError, updateNotFoundError, updateConflictError } from '../common/utils/error.utils';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { RegisterCustomerDto } from './dto/RegisterCustomer.dto';
+import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -84,5 +85,30 @@ export class CustomersService {
     });
 
     return await newCustomer.save();
+  }
+  async updateCustomer(id: string, updateCustomerDto: UpdateCustomerDto): Promise<CustomerDocument> {
+    try {
+      const existingCustomer = await this.customerModel.findById(id).exec();
+      if (!existingCustomer) {
+        throw updateNotFoundError('Customer', id);
+      }
+
+      if (updateCustomerDto.email && updateCustomerDto.email !== existingCustomer.email) { //ne pas oublier le telephone aussi 
+        const emailExists = await this.customerModel.findOne({ email: updateCustomerDto.email }).exec();
+        if (emailExists) {
+          throw updateConflictError('Customer with this email already exists');
+        }
+      }
+
+      Object.assign(existingCustomer, updateCustomerDto);
+
+
+      return await existingCustomer.save();
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ConflictException) {
+        throw error;
+      }
+      throw new InternalServerErrorException((error as Error).message);
+    }
   }
 }

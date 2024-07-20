@@ -15,3 +15,11 @@ export function createUnauthorizedError(message: string = 'Unauthorized'): Unaut
 export function createConflictError(message: string = 'Conflict'): ConflictException {
   return new ConflictException(message);
 }
+
+export function updateConflictError(message: string = 'Conflict'): ConflictException {
+  return new ConflictException(message);
+}
+
+export function updateNotFoundError(resource: string, id: string | number): NotFoundException {
+  return new NotFoundException(`${resource} with ID ${id} not found`);
+}

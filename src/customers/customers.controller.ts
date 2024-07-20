@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Param,
   NotFoundException,
@@ -25,6 +26,7 @@ import { LoginDto } from '../auth/dto/login.dto';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { RegisterCustomerDto } from './dto/RegisterCustomer.dto';
+import { UpdateCustomerDto } from './dto/update-customer.dto'; // Import the new DTO
 import { JwtRequest } from '../common/types/custom';
 
 @ApiTags('customers')
@@ -130,5 +132,36 @@ export class CustomersController {
       }
       throw new InternalServerErrorException((error as Error).message);
     }
+  }
+
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update current customer' })
+  @UseGuards(AuthGuard('jwt'))
+  @Put(':id')
+  async updateCustomer(@Param('id') id: string, @Body() updateCustomerDto: Partial<CustomerDocument>, @Req() req: JwtRequest): Promise<CustomerDocument> {
+    const user = req.user;
+    this.logger.debug(`Current user from JWT: ${JSON.stringify(user)}`);
+
+    if (!user) {
+      this.logger.warn('Unauthorized access attempt');
+      throw new UnauthorizedException();
+    }
+
+    if (id !== user.sub) {
+      this.logger.warn(`User with ID: ${user.sub} attempted to update another user's data`);
+      throw new UnauthorizedException('You can only update your own data');
+    }
+
+    this.logger.debug(`Updating customer with ID: ${id}`);
+
+    const customer = await this.customersService.updateCustomer(id, updateCustomerDto);
+    if (!customer) {
+      this.logger.warn(`Customer with ID: ${id} not found`);
+      throw createNotFoundError('Customer', id);
+    }
+
+    this.logger.debug(`Updated customer details: ${JSON.stringify(customer)}`);
+    return customer;
   }
 }
