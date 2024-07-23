@@ -58,6 +58,32 @@ export class CustomersController {
   }
 
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get a customer by username' })
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':username')
+  async findOne(@Param('username') username: string): Promise<CustomerDocument> {
+    try {
+      this.logger.debug(`Finding customer with username: ${username}`);
+      const customer = await this.customersService.findOne(username);
+      if (!customer) {
+        this.logger.warn(`Customer with username: ${username} not found`);
+        throw createNotFoundError('Customer', username);
+      }
+      this.logger.debug(`Found customer: ${JSON.stringify(customer)}`);
+      return customer;
+    } catch (error: any) { // Changed 'unknown' to 'any'
+      this.logger.error(`Error finding customer with username: ${username}`, error.stack);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException((error as Error).message);
+    }
+  }
+
+
+
+
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update current customer' })
   @UseGuards(ScopesGuard)
   @Put(':id')
@@ -90,4 +116,21 @@ export class CustomersController {
     this.logger.debug(`Updated customer details: ${JSON.stringify(customer)}`);
     return customer;
   }
+
+  @Post()
+  async create(@Body() createCustomerDto: CreateCustomerDto) {
+    try {
+      this.logger.debug(`Creating customer with username: ${createCustomerDto.username}`);
+      const result = await this.customersService.createCustomer(createCustomerDto);
+      this.logger.debug(`Customer created successfully: ${JSON.stringify(result)}`);
+      return result;
+    } catch (error: any) { // Changed 'unknown' to 'any'
+      this.logger.error(`Error creating customer with username: ${createCustomerDto.username}`, error.stack);
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      throw new InternalServerErrorException((error as Error).message);
+    }
+  }
+
 }
