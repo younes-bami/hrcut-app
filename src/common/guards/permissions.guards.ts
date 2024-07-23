@@ -1,23 +1,22 @@
-// src/guards/scopes.guard.ts
-
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CustomRequest } from '../interfaces/custom-request.interface';
 
 @Injectable()
-export class ScopesGuard implements CanActivate {
+export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<CustomRequest>();
-    const requiredScopes = this.reflector.get<string[]>('scopes', context.getHandler());
+    const requiredPermissions = this.reflector.get<string[]>('permissions', context.getHandler());
 
-    if (!requiredScopes) {
+    if (!requiredPermissions) {
       return true;
     }
 
-    const userScopes = request.user?.scopes;
-    if (!userScopes || !requiredScopes.every(scope => userScopes.includes(scope))) {
+    const request = context.switchToHttp().getRequest<CustomRequest>();
+    const userPermissions = request.user?.permissions;
+
+    if (!userPermissions || !requiredPermissions.every(permission => userPermissions.includes(permission))) {
       throw new ForbiddenException('Insufficient permissions');
     }
 

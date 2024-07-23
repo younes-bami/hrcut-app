@@ -3,7 +3,8 @@ export interface JwtPayload {
   sub: string;
   email: string;
   name: string;
-  scopes?: string[]; // Ajout de la propriété scopes
+  scope?: string[]; // Ajout de la propriété scopes
+  permissions?: string[]; // Ajout de la propriété permissions
   iat?: number;
   exp?: number;
   iss?: string;

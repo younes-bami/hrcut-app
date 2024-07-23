@@ -12,6 +12,9 @@ import { TokenVerificationMiddleware } from './common/middleware/token-verificat
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [() => ({
+        REQUIRED_SCOPES: process.env.REQUIRED_SCOPES ? process.env.REQUIRED_SCOPES.split(',') : []
+      })],
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],

@@ -1,6 +1,8 @@
+// src/customers/customers.controller.ts
 import {
   Controller,
   Get,
+  Post,
   Put,
   Body,
   Param,
@@ -8,7 +10,12 @@ import {
   UseGuards,
   Req,
   UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+  InternalServerErrorException,
+  ConflictException,
   Logger,
+  SetMetadata,
 } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { CustomerDocument } from './schemas/customer.schema';
@@ -17,9 +24,10 @@ import { Component } from '../common/decorators/component.decorator';
 import { ComponentInterceptor } from '../common/interceptors/component.interceptor';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UpdateCustomerDto } from './dto/update-customer.dto'; // Import the new DTO
+import { CreateCustomerDto } from './dto/create-customer.dto'; // Import the new DTO
 import { JwtRequest } from '../common/types/custom';
-import { ScopesGuard } from '../common/guards/scope.guards';
-// src/customers/customers.controller.ts
+import { PermissionsGuard } from '../common/guards/permissions.guards';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('customers')
 @UseInterceptors(ComponentInterceptor)
@@ -32,7 +40,8 @@ export class CustomersController {
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get current customer' })
-  @UseGuards(ScopesGuard)
+  @UseGuards(PermissionsGuard)
+  @SetMetadata('permissions', ['read:customers'])
   @Get('me')
   async getCurrentCustomer(@Req() req: JwtRequest): Promise<CustomerDocument> {
     const user = req.user;
@@ -50,7 +59,7 @@ export class CustomersController {
     const customer = await this.customersService.findOne(user.username);
     if (!customer) {
       this.logger.warn(`Customer with username: ${user.username} not found`);
-      throw new UnauthorizedException('Customer not found');
+      throw createNotFoundError('Customer', user.username);
     }
 
     this.logger.debug(`Current customer details: ${JSON.stringify(customer)}`);
@@ -71,7 +80,7 @@ export class CustomersController {
       }
       this.logger.debug(`Found customer: ${JSON.stringify(customer)}`);
       return customer;
-    } catch (error: any) { // Changed 'unknown' to 'any'
+    } catch (error: any) {
       this.logger.error(`Error finding customer with username: ${username}`, error.stack);
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
@@ -80,12 +89,9 @@ export class CustomersController {
     }
   }
 
-
-
-
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update current customer' })
-  @UseGuards(ScopesGuard)
+  @UseGuards(PermissionsGuard)
   @Put(':id')
   async updateCustomer(
     @Param('id') id: string,
@@ -110,7 +116,7 @@ export class CustomersController {
 
     if (!customer) {
       this.logger.warn(`Customer with ID: ${id} not found`);
-      throw new UnauthorizedException('Customer not found');
+      throw createNotFoundError('Customer', id);
     }
 
     this.logger.debug(`Updated customer details: ${JSON.stringify(customer)}`);
@@ -124,7 +130,7 @@ export class CustomersController {
       const result = await this.customersService.createCustomer(createCustomerDto);
       this.logger.debug(`Customer created successfully: ${JSON.stringify(result)}`);
       return result;
-    } catch (error: any) { // Changed 'unknown' to 'any'
+    } catch (error: any) {
       this.logger.error(`Error creating customer with username: ${createCustomerDto.username}`, error.stack);
       if (error instanceof ConflictException) {
         throw error;
@@ -132,5 +138,4 @@ export class CustomersController {
       throw new InternalServerErrorException((error as Error).message);
     }
   }
-
 }
