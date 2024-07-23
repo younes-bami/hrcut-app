@@ -7,6 +7,8 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ComponentInterceptor } from './common/interceptors/component.interceptor';
 import { LoggingMiddleware } from '../src/common/middleware/logging.middleware';
+import { TokenVerificationMiddleware } from './common/middleware/token-verification.middleware';
+
 
 
 @Module({
@@ -40,9 +42,16 @@ import { LoggingMiddleware } from '../src/common/middleware/logging.middleware';
   ],
 })
 export class AppModule {
- // configure(consumer: MiddlewareConsumer) {
+ // configure(consumer: MiddlewareConsumer,TokenVerificationMiddleware: MiddlewareConsumer) {
  //   consumer
- //     .apply(LoggingMiddleware)
- //     .forRoutes({ path: '*', method: RequestMethod.ALL });
+ //     consumer
+  
+ 
+ //    .apply(LoggingMiddleware)
+ //     .forRoutes('*', method: RequestMethod.ALL ); // Appliquer le middleware à toutes les routes
+
+  //    consumer
+  //    .apply(TokenVerificationMiddleware)
+  //    .forRoutes('*', method: RequestMethod.ALL ); // Appliquer le middleware à toutes les routes
  // }
 }

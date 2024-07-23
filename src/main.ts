@@ -30,6 +30,9 @@ async function bootstrap() {
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe());
 
+    // Use middlewares
+    //app.use(new LoggingMiddleware().use);
+    //app.use(new TokenVerificationMiddleware().use);
 
   await app.listen(3000);
 }
