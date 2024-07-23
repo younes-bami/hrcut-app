@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as dotenv from 'dotenv';
 import { ValidationPipe } from '@nestjs/common';
+import { TokenVerificationMiddleware } from './common/middleware/token-verification.middleware';
 
 
 dotenv.config();

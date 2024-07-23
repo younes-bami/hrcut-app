@@ -1,11 +1,11 @@
+// src/common/interfaces/jwt-payload.interface.ts
 export interface JwtPayload {
-    sub: string;
-    email: string;
-    name: string;
-    iat?: number;
-    exp?: number;
-    iss?: string; // Ajoutez cette ligne
-    aud?: string; // Ajoutez cette ligne
-    // Ajoutez d'autres champs nécessaires selon votre payload JWT
-  }
-  
+  sub: string;
+  email: string;
+  name: string;
+  scopes?: string[]; // Ajout de la propriété scopes
+  iat?: number;
+  exp?: number;
+  iss?: string;
+  aud?: string;
+}

@@ -12,14 +12,12 @@ import { createNotFoundError, createConflictError, createUnauthorizedError, upda
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { RegisterCustomerDto } from './dto/RegisterCustomer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class CustomersService {
   constructor(
     @InjectModel(Customer.name) private customerModel: Model<CustomerDocument>,
-    private jwtService: JwtService,
   ) {}
 
   private async findCustomerByField(field: string, value: string): Promise<CustomerDocument | null> {
