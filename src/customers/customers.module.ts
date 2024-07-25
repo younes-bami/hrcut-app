@@ -1,19 +1,31 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CustomersService } from './customers.service';
 import { CustomersController } from './customers.controller';
 import { Customer, CustomerSchema } from './schemas/customer.schema';
-import { AuthModule } from '../auth/auth.module'; // Importez AuthModule pour accéder aux services d'authentification
 import { JwtModule } from '@nestjs/jwt';
+import { JwtAuthMiddleware } from '../common/middlewares/jwt-auth.middleware';
+import { HttpModule } from '@nestjs/axios'; // Importer HttpModule
+import { RabbitMQConsumerService } from '../rabbitmq.consumer/rabbitmq.consumer.service';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Customer.name, schema: CustomerSchema }]),
-    AuthModule,
-    JwtModule, // Importez AuthModule pour accéder aux services d'authentification
+    JwtModule,
+    HttpModule, // Ajouter HttpModule aux imports
   ],
   controllers: [CustomersController],
   providers: [CustomersService],
-  exports: [CustomersService],
+  exports: [CustomersService, MongooseModule],
 })
-export class CustomersModule {}
+export class CustomersModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(JwtAuthMiddleware)
+      .forRoutes(
+        { path: 'customers/me', method: RequestMethod.GET },
+        { path: 'customers/:username', method: RequestMethod.GET },
+        { path: 'customers/:id', method: RequestMethod.PUT },
+      );
+  }
+}

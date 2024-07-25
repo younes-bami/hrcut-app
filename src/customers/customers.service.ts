@@ -3,23 +3,19 @@ import {
   NotFoundException,
   InternalServerErrorException,
   ConflictException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Customer, CustomerDocument } from './schemas/customer.schema';
-import { createNotFoundError, createConflictError, createUnauthorizedError, updateNotFoundError, updateConflictError } from '../common/utils/error.utils';
+import { createNotFoundError, createConflictError, updateNotFoundError, updateConflictError } from '../common/utils/error.utils';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { RegisterCustomerDto } from './dto/RegisterCustomer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class CustomersService {
   constructor(
     @InjectModel(Customer.name) private customerModel: Model<CustomerDocument>,
-    private jwtService: JwtService,
   ) {}
 
   private async findCustomerByField(field: string, value: string): Promise<CustomerDocument | null> {
@@ -78,14 +74,10 @@ export class CustomersService {
   async registerCustomer(registerCustomerDto: RegisterCustomerDto): Promise<CustomerDocument> {
     await this.checkExistingCustomer(registerCustomerDto.username, registerCustomerDto.email);
 
-    const hashedPassword = await bcrypt.hash(registerCustomerDto.password, 10);
-    const newCustomer = new this.customerModel({
-      ...registerCustomerDto,
-      password: hashedPassword,
-    });
-
+    const newCustomer = new this.customerModel(registerCustomerDto);
     return await newCustomer.save();
   }
+
   async updateCustomer(id: string, updateCustomerDto: UpdateCustomerDto): Promise<CustomerDocument> {
     try {
       const existingCustomer = await this.customerModel.findById(id).exec();
@@ -93,7 +85,7 @@ export class CustomersService {
         throw updateNotFoundError('Customer', id);
       }
 
-      if (updateCustomerDto.email && updateCustomerDto.email !== existingCustomer.email) { //ne pas oublier le telephone aussi 
+      if (updateCustomerDto.email && updateCustomerDto.email !== existingCustomer.email) {
         const emailExists = await this.customerModel.findOne({ email: updateCustomerDto.email }).exec();
         if (emailExists) {
           throw updateConflictError('Customer with this email already exists');
@@ -101,7 +93,6 @@ export class CustomersService {
       }
 
       Object.assign(existingCustomer, updateCustomerDto);
-
 
       return await existingCustomer.save();
     } catch (error) {

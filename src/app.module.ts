@@ -2,12 +2,11 @@ import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CustomersModule } from './customers/customers.module';
-import { AuthModule } from './auth/auth.module';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ComponentInterceptor } from './common/interceptors/component.interceptor';
-import { LoggingMiddleware } from '../src/common/middleware/logging.middleware';
-
+import { LoggingMiddleware } from './common/middlewares/logging.middleware';
+import { RabbitMQModule } from './rabbitmq.consumer/rabbitmq.module'; // Ajouté RabbitMQModule
 
 @Module({
   imports: [
@@ -25,8 +24,7 @@ import { LoggingMiddleware } from '../src/common/middleware/logging.middleware';
       inject: [ConfigService],
     }),
     CustomersModule,
-    AuthModule,
-
+    RabbitMQModule, // Ajouté RabbitMQModule
   ],
   providers: [
     {
@@ -40,9 +38,9 @@ import { LoggingMiddleware } from '../src/common/middleware/logging.middleware';
   ],
 })
 export class AppModule {
- // configure(consumer: MiddlewareConsumer) {
- //   consumer
- //     .apply(LoggingMiddleware)
- //     .forRoutes({ path: '*', method: RequestMethod.ALL });
- // }
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(LoggingMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
+  }
 }

@@ -16,17 +16,15 @@ import {
   Logger,
 } from '@nestjs/common';
 import { CustomersService } from './customers.service';
-import { AuthService } from '../auth/auth.service';
 import { CustomerDocument } from './schemas/customer.schema';
-import { createNotFoundError, createUnauthorizedError } from '../common/utils/error.utils';
+import { createNotFoundError } from '../common/utils/error.utils';
 import { Component } from '../common/decorators/component.decorator';
 import { ComponentInterceptor } from '../common/interceptors/component.interceptor';
 import { AuthGuard } from '@nestjs/passport';
-import { LoginDto } from '../auth/dto/login.dto';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { RegisterCustomerDto } from './dto/RegisterCustomer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto'; // Import the new DTO
+import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtRequest } from '../common/types/custom';
 
 @ApiTags('customers')
@@ -36,10 +34,7 @@ import { JwtRequest } from '../common/types/custom';
 export class CustomersController {
   private readonly logger = new Logger(CustomersController.name);
 
-  constructor(
-    private readonly customersService: CustomersService,
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly customersService: CustomersService) {}
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get current customer' })
@@ -80,26 +75,13 @@ export class CustomersController {
       }
       this.logger.debug(`Found customer: ${JSON.stringify(customer)}`);
       return customer;
-    } catch (error: any) { // Changed 'unknown' to 'any'
+    } catch (error: any) {
       this.logger.error(`Error finding customer with username: ${username}`, error.stack);
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
       throw new InternalServerErrorException((error as Error).message);
     }
-  }
-
-  @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    this.logger.debug(`Logging in customer with username: ${loginDto.username}`);
-    const customer = await this.authService.validateCustomer(loginDto.username, loginDto.password);
-    if (!customer) {
-      this.logger.warn(`Invalid credentials for username: ${loginDto.username}`);
-      throw createUnauthorizedError('Invalid credentials');
-    }
-    const result = this.authService.login(customer);
-    this.logger.debug(`Login successful for username: ${loginDto.username}`);
-    return result;
   }
 
   @Post()
@@ -109,7 +91,7 @@ export class CustomersController {
       const result = await this.customersService.createCustomer(createCustomerDto);
       this.logger.debug(`Customer created successfully: ${JSON.stringify(result)}`);
       return result;
-    } catch (error: any) { // Changed 'unknown' to 'any'
+    } catch (error: any) {
       this.logger.error(`Error creating customer with username: ${createCustomerDto.username}`, error.stack);
       if (error instanceof ConflictException) {
         throw error;
@@ -125,7 +107,7 @@ export class CustomersController {
       const result = await this.customersService.registerCustomer(registerCustomerDto);
       this.logger.debug(`Customer registered successfully: ${JSON.stringify(result)}`);
       return result;
-    } catch (error: any) { // Changed 'unknown' to 'any'
+    } catch (error: any) {
       this.logger.error(`Error registering customer with username: ${registerCustomerDto.username}`, error.stack);
       if (error instanceof ConflictException) {
         throw error;
@@ -133,7 +115,6 @@ export class CustomersController {
       throw new InternalServerErrorException((error as Error).message);
     }
   }
-
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update current customer' })
