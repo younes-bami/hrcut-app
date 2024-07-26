@@ -6,7 +6,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ComponentInterceptor } from './common/interceptors/component.interceptor';
 import { LoggingMiddleware } from './common/middlewares/logging.middleware';
-import { RabbitMQModule } from './rabbitmq.consumer/rabbitmq.module'; // Ajouté RabbitMQModule
+import { RabbitMQModule } from './rabbitmq.consumer/rabbitmq.module'; // Import du module RabbitMQ
 
 @Module({
   imports: [
