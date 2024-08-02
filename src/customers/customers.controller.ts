@@ -20,12 +20,12 @@ import { CustomerDocument } from './schemas/customer.schema';
 import { createNotFoundError } from '../common/utils/error.utils';
 import { Component } from '../common/decorators/component.decorator';
 import { ComponentInterceptor } from '../common/interceptors/component.interceptor';
-import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CreateCustomerDto } from './dto/create-customer.dto';
-import { RegisterCustomerDto } from './dto/RegisterCustomer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtRequest } from '../common/types/custom';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
 @ApiTags('customers')
 @UseInterceptors(ComponentInterceptor)
@@ -38,32 +38,45 @@ export class CustomersController {
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get current customer' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getCurrentCustomer(@Req() req: JwtRequest): Promise<CustomerDocument> {
+  async getCurrentCustomer(@Req() req: JwtRequest) {
     const user = req.user;
     this.logger.debug(`Current user from JWT: ${JSON.stringify(user)}`);
 
-    if (!user) {
+    if (!user || !user.sub) {
       this.logger.warn('Unauthorized access attempt');
       throw new UnauthorizedException();
     }
 
-    this.logger.debug(`Getting current customer with username: ${user.username}`);
+    try {
+      this.logger.debug(`Getting current customer with username: ${user.username}`);
+      const customer = await this.customersService.findOne(user.username);
+      if (!customer) {
+        this.logger.warn(`Customer with username: ${user.username} not found`);
+        throw new NotFoundException(`Customer with username: ${user.username} not found`);
+      }
 
-    const customer = await this.customersService.findOne(user.username);
-    if (!customer) {
-      this.logger.warn(`Customer with username: ${user.username} not found`);
-      throw createNotFoundError('Customer', user.username);
+      this.logger.debug(`Current customer details: ${JSON.stringify(customer)}`);
+      return customer;
+    } catch (error: unknown) {
+      this.logger.error(`Error in getCurrentCustomer: ${JSON.stringify(error)}`);
+      if (error instanceof NotFoundException) {
+        this.logger.warn(`Not found error in getCurrentCustomer: ${(error as Error).message}`, (error as Error).stack);
+        throw error;
+      }
+      if (error instanceof UnauthorizedException) {
+        this.logger.warn(`Unauthorized error in getCurrentCustomer: ${(error as Error).message}`, (error as Error).stack);
+        throw error;
+      }
+      this.logger.error(`Internal server error in getCurrentCustomer: ${(error as Error).message}`, (error as Error).stack);
+      throw new InternalServerErrorException('Internal server error');
     }
-
-    this.logger.debug(`Current customer details: ${JSON.stringify(customer)}`);
-    return customer;
   }
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get a customer by username' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get(':username')
   async findOne(@Param('username') username: string): Promise<CustomerDocument> {
     try {
@@ -100,37 +113,25 @@ export class CustomersController {
     }
   }
 
-  @Post('register')
-  async register(@Body() registerCustomerDto: RegisterCustomerDto) {
-    try {
-      this.logger.debug(`Registering customer with username: ${registerCustomerDto.username}`);
-      const result = await this.customersService.registerCustomer(registerCustomerDto);
-      this.logger.debug(`Customer registered successfully: ${JSON.stringify(result)}`);
-      return result;
-    } catch (error: any) {
-      this.logger.error(`Error registering customer with username: ${registerCustomerDto.username}`, error.stack);
-      if (error instanceof ConflictException) {
-        throw error;
-      }
-      throw new InternalServerErrorException((error as Error).message);
-    }
-  }
-
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update current customer' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
-  async updateCustomer(@Param('id') id: string, @Body() updateCustomerDto: Partial<CustomerDocument>, @Req() req: JwtRequest): Promise<CustomerDocument> {
+  async updateCustomer(
+    @Param('id') id: string,
+    @Body() updateCustomerDto: Partial<CustomerDocument>,
+    @Req() req: JwtRequest,
+  ): Promise<CustomerDocument> {
     const user = req.user;
     this.logger.debug(`Current user from JWT: ${JSON.stringify(user)}`);
 
-    if (!user) {
+    if (!user || !user.sub) {
       this.logger.warn('Unauthorized access attempt');
       throw new UnauthorizedException();
     }
 
     if (id !== user.sub) {
-      this.logger.warn(`User with ID: ${user.sub} attempted to update another user's data`);
+      this.logger.warn(`User with ID: ${user.sub} attempted to update another user's (id:  ${id} ) data`);
       throw new UnauthorizedException('You can only update your own data');
     }
 

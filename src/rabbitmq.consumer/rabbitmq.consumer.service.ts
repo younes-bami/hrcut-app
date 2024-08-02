@@ -1,5 +1,7 @@
 import { Injectable, OnModuleInit, Logger, InternalServerErrorException } from '@nestjs/common';
 import * as amqp from 'amqplib';
+import { CustomersService } from '../customers/customers.service';
+import { CreateCustomerDto } from '../customers/dto/create-customer.dto';
 
 @Injectable()
 export class RabbitMQConsumerService implements OnModuleInit {
@@ -9,6 +11,8 @@ export class RabbitMQConsumerService implements OnModuleInit {
   private readonly exchange = 'customer_exchange';
   private readonly queue = 'customer_queue';
   private readonly routingKey = 'create_customer';
+
+  constructor(private readonly customersService: CustomersService) {}
 
   async onModuleInit() {
     try {
@@ -21,9 +25,18 @@ export class RabbitMQConsumerService implements OnModuleInit {
         if (msg !== null) {
           const messageContent = msg.content.toString();
           this.logger.log(`Received message: ${messageContent}`);
-          // Process the message
-          this.channel.ack(msg);
-          this.logger.log('Message acknowledged');
+          try {
+            const { pattern, data } = JSON.parse(messageContent);
+            if (pattern === 'create_customer') {
+              this.logger.log('Processing the message');
+              await this.customersService.createCustomer(data);
+              this.logger.log('Customer created successfully');
+              this.channel.ack(msg);
+            }
+          } catch (error) {
+            this.logger.error('Failed to create customer', (error as Error).stack);
+            this.channel.nack(msg, false, true);
+          }
         }
       }, { noAck: false });
       this.logger.log('RabbitMQ consumer connected and listening for messages');
@@ -33,3 +46,5 @@ export class RabbitMQConsumerService implements OnModuleInit {
     }
   }
 }
+
+

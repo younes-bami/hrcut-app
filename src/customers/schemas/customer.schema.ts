@@ -3,11 +3,15 @@ import { Document } from 'mongoose';
 
 @Schema()
 export class Customer {
+
+  @Prop({ required: false })
+  authUserId!: string;  // ID de l'utilisateur dans le microservice Auth
+
   @Prop({ required: true })
   username!: string;
 
-  @Prop({ required: true })
-  password!: string;
+//  @Prop({ required: true })
+//  password!: string;
 
   @Prop({ required: true })
   firstName!: string;

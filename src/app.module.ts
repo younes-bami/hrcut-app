@@ -7,11 +7,14 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ComponentInterceptor } from './common/interceptors/component.interceptor';
 import { LoggingMiddleware } from './common/middlewares/logging.middleware';
 import { RabbitMQModule } from './rabbitmq.consumer/rabbitmq.module'; // Import du module RabbitMQ
+import { JwtAuthMiddleware } from './common/middlewares/jwt-auth.middleware';
+import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env', // Chemin vers votre fichier .env
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],

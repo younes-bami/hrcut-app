@@ -7,15 +7,19 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthMiddleware } from '../common/middlewares/jwt-auth.middleware';
 import { HttpModule } from '@nestjs/axios'; // Importer HttpModule
 import { RabbitMQConsumerService } from '../rabbitmq.consumer/rabbitmq.consumer.service';
+import { JwtStrategy } from './jwt/jwt.strategy';
+import { PassportModule } from '@nestjs/passport';
+
 
 @Module({
   imports: [
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     MongooseModule.forFeature([{ name: Customer.name, schema: CustomerSchema }]),
     JwtModule,
     HttpModule, // Ajouter HttpModule aux imports
   ],
   controllers: [CustomersController],
-  providers: [CustomersService],
+  providers: [CustomersService,JwtStrategy],
   exports: [CustomersService, MongooseModule],
 })
 export class CustomersModule {
