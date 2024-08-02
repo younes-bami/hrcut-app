@@ -6,10 +6,11 @@ import {
   Body,
   Param,
   NotFoundException,
-  BadRequestException,
   InternalServerErrorException,
   UseInterceptors,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
   ConflictException,
   Req,
   UnauthorizedException,
@@ -20,12 +21,11 @@ import { CustomerDocument } from './schemas/customer.schema';
 import { createNotFoundError } from '../common/utils/error.utils';
 import { Component } from '../common/decorators/component.decorator';
 import { ComponentInterceptor } from '../common/interceptors/component.interceptor';
-import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtRequest } from '../common/types/custom';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
 @ApiTags('customers')
 @UseInterceptors(ComponentInterceptor)
@@ -38,6 +38,9 @@ export class CustomersController {
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get current customer' })
+  @ApiResponse({status: 200,description: 'The current customer has been successfully retrieved.'})
+  @ApiResponse({ status: 401, description: 'Unauthorized access attempt.' })
+  @ApiResponse({ status: 404, description: 'Customer not found.' })
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getCurrentCustomer(@Req() req: JwtRequest) {
@@ -76,6 +79,11 @@ export class CustomersController {
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get a customer by username' })
+  @ApiResponse({
+    status: 200,
+    description: 'The customer has been successfully retrieved.',})
+  @ApiResponse({ status: 401, description: 'Unauthorized access attempt.' })
+  @ApiResponse({ status: 404, description: 'Customer not found.' })
   @UseGuards(JwtAuthGuard)
   @Get(':username')
   async findOne(@Param('username') username: string): Promise<CustomerDocument> {
@@ -90,13 +98,19 @@ export class CustomersController {
       return customer;
     } catch (error: any) {
       this.logger.error(`Error finding customer with username: ${username}`, error.stack);
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
         throw error;
       }
       throw new InternalServerErrorException((error as Error).message);
     }
   }
 
+  @ApiOperation({ summary: 'Create a new customer' })
+  @ApiBody({type: CreateCustomerDto,description: 'The customer creation data'})
+  @ApiResponse({status: 201,description: 'The customer has been successfully created.'})
+  @ApiResponse({ status: 400, description: 'Invalid input data.' })
+  @ApiResponse({ status: 409, description: 'Customer with this email, username, or phone number already exists.' })
+  @UsePipes(new ValidationPipe({ transform: true }))
   @Post()
   async create(@Body() createCustomerDto: CreateCustomerDto) {
     try {
@@ -115,11 +129,18 @@ export class CustomersController {
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update current customer' })
+  @ApiBody({type: UpdateCustomerDto,description: 'The customer update data'})
+  @ApiResponse({status: 200,description: 'The customer has been successfully updated.'})
+  @ApiResponse({ status: 400, description: 'Invalid input data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized access attempt.' })
+  @ApiResponse({ status: 404, description: 'Customer not found.' })
+  @ApiResponse({ status: 409, description: 'Customer with this email or phone number already exists.' })
+  @UsePipes(new ValidationPipe({ transform: true }))
   @UseGuards(JwtAuthGuard)
   @Put(':id')
   async updateCustomer(
     @Param('id') id: string,
-    @Body() updateCustomerDto: Partial<CustomerDocument>,
+    @Body() updateCustomerDto: Partial<UpdateCustomerDto>,
     @Req() req: JwtRequest,
   ): Promise<CustomerDocument> {
     const user = req.user;
@@ -130,14 +151,9 @@ export class CustomersController {
       throw new UnauthorizedException();
     }
 
-    if (id !== user.sub) {
-      this.logger.warn(`User with ID: ${user.sub} attempted to update another user's (id:  ${id} ) data`);
-      throw new UnauthorizedException('You can only update your own data');
-    }
-
     this.logger.debug(`Updating customer with ID: ${id}`);
 
-    const customer = await this.customersService.updateCustomer(id, updateCustomerDto);
+    const customer = await this.customersService.updateCustomer(id, user.sub, updateCustomerDto);
     if (!customer) {
       this.logger.warn(`Customer with ID: ${id} not found`);
       throw createNotFoundError('Customer', id);

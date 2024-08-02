@@ -4,9 +4,7 @@ import { IsMoroccanPhoneNumber } from './custom-validators';
 
 
 export class UpdateCustomerDto {
-  @IsOptional()
-  @IsString()
-  username?: string;
+
 
   @IsOptional()
   @IsString()

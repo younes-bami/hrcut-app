@@ -3,6 +3,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
   ConflictException,
+  UnauthorizedException,
   Logger
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -61,7 +62,7 @@ export class CustomersService {
     }
   }
 
-  private async checkExistingCustomer(username: string, email: string) {
+  private async checkExistingCustomer(username: string, email: string, phoneNumber: string) {
     const existingCustomerByEmail = await this.customerModel.findOne({ email }).exec();
     if (existingCustomerByEmail) {
       this.logger.warn(`Customer with email: ${email} already exists`);
@@ -73,11 +74,15 @@ export class CustomersService {
       this.logger.warn(`Customer with username: ${username} already exists`);
       throw createConflictError('Customer with this username already exists');
     }
+    const existingCustomerByPhoneNumber = await this.customerModel.findOne({ phoneNumber }).exec();
+    if (existingCustomerByPhoneNumber) {
+      this.logger.warn(`Customer with phone number: ${phoneNumber} already exists`);
+      throw createConflictError('Customer with this phone number already exists');
+    }
   }
 
   async createCustomer(createCustomerDto: CreateCustomerDto): Promise<CustomerDocument> {
-    await this.checkExistingCustomer(createCustomerDto.username, createCustomerDto.email);
-    this.logger.debug(`Creating customer with email: ${createCustomerDto.email}`);
+    await this.checkExistingCustomer(createCustomerDto.username, createCustomerDto.email, createCustomerDto.phoneNumber);
 
     const createdCustomer = new this.customerModel(createCustomerDto);
     this.logger.debug(`Customer to create: ${JSON.stringify(createdCustomer)}`);
@@ -87,17 +92,29 @@ export class CustomersService {
 
 
 
-  async updateCustomer(id: string, updateCustomerDto: UpdateCustomerDto): Promise<CustomerDocument> {
+  async updateCustomer(id: string, sub: string, updateCustomerDto: UpdateCustomerDto): Promise<CustomerDocument> {
     try {
       const existingCustomer = await this.customerModel.findById(id).exec();
       if (!existingCustomer) {
-        throw createNotFoundError('Customer', id);
+        throw updateNotFoundError('Customer', id);
+      }
+
+
+      if (existingCustomer.authUserId !== sub) {
+        this.logger.warn(`User with authUserId: ${sub} attempted to update another user's data`);
+        throw new UnauthorizedException('You can only update your own data');
       }
 
       if (updateCustomerDto.email && updateCustomerDto.email !== existingCustomer.email) {
         const emailExists = await this.customerModel.findOne({ email: updateCustomerDto.email }).exec();
         if (emailExists) {
           throw updateConflictError('Customer with this email already exists');
+        }
+      }
+      if (updateCustomerDto.phoneNumber && updateCustomerDto.phoneNumber !== existingCustomer.phoneNumber) {
+        const phoneNumberExists = await this.customerModel.findOne({ phoneNumber: updateCustomerDto.phoneNumber }).exec();
+        if (phoneNumberExists) {
+          throw updateConflictError('Customer with this phone number already exists');
         }
       }
 
