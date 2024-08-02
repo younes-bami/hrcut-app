@@ -40,3 +40,12 @@ async function bootstrap() {
   await app.listen(3002); // Port dédié pour le auth-service
 }
 bootstrap();
+
+
+
+
+//Next : 
+//Token Validation via middleware : using rabbitmq + cache 
+//Tonek validation : jwtstrategy : verify user still exists + cache 
+//Update customer : --> update user using rabbitmq 
+//email verification 
